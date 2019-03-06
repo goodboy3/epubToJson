@@ -7,33 +7,45 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         step((generator = generator.apply(thisArg, _arguments || [])).next());
     });
 };
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
 Object.defineProperty(exports, "__esModule", { value: true });
+const fs_1 = __importDefault(require("fs"));
 const Operator_1 = require("./Operator");
+const DownLoader_1 = require("./DownLoader");
 exports.RootDir = __dirname + '/..';
 exports.TempFile = 'temp';
-function main() {
+function main(downloadUrl, distDir) {
     return __awaiter(this, void 0, void 0, function* () {
         //读取文件夹内的文件
-        let epubDocumentPath = exports.RootDir + '/epub/';
-        //let files = fs.readdirSync(epubDocumentPath);
-        //console.log(files);
+        let epubDirPath = exports.RootDir + '/epubTemp/';
         let fileName = exports.TempFile;
-        // if (files.length == 0) 
-        // {
-        //     console.log("can not find any file");
-        //     return;
-        // }
-        // fileName = files[0].replace('.epub', '');
-        //console.log(fileName);
-        //解压epub文件
-        let res = yield Operator_1.Operator.UnzipEpub(epubDocumentPath, fileName);
+        fs_1.default.mkdirSync(epubDirPath);
+        //下载文件
+        let res = yield DownLoader_1.DownLoader.DownLoadFile("https://www.ixdzs.com/down?id=206154&p=4", epubDirPath, fileName + '.epub');
         if (res == false) {
-            return;
+            Operator_1.Operator.DeleteTempFile(epubDirPath);
+            return false;
+        }
+        //解压epub文件
+        res = yield Operator_1.Operator.UnzipEpub(epubDirPath, fileName, epubDirPath);
+        if (res == false) {
+            Operator_1.Operator.DeleteTempFile(epubDirPath);
+            return false;
         }
         //解压成功后开始解析
+        fs_1.default.mkdirSync(distDir);
+        res = yield Operator_1.Operator.ConvertToJson(epubDirPath + fileName, distDir);
+        if (res == false) {
+            Operator_1.Operator.DeleteTempFile(epubDirPath);
+            Operator_1.Operator.DeleteTempFile(distDir);
+            return false;
+        }
+        //完成后删除临时文件
+        Operator_1.Operator.DeleteTempFile(epubDirPath);
+        return true;
     });
 }
-//let downResult:boolean= await DownLoader.DownLoadFile("https://www.ixdzs.com/down?id=206154&p=4", RootDir + '/epub/', TempFile+'.epub');
-//main();
-Operator_1.Operator.ConvertToJson(exports.RootDir + '/bookJson/');
-//# sourceMappingURL=data:application/json;base64,eyJ2ZXJzaW9uIjozLCJmaWxlIjoiaW5kZXguanMiLCJzb3VyY2VSb290IjoiIiwic291cmNlcyI6WyIuLi9zcmMvaW5kZXgudHMiXSwibmFtZXMiOltdLCJtYXBwaW5ncyI6Ijs7Ozs7Ozs7OztBQUNBLHlDQUFzQztBQUd6QixRQUFBLE9BQU8sR0FBRyxTQUFTLEdBQUcsS0FBSyxDQUFDO0FBQzVCLFFBQUEsUUFBUSxHQUFHLE1BQU0sQ0FBQztBQUUvQixTQUFlLElBQUk7O1FBRWYsV0FBVztRQUNYLElBQUksZ0JBQWdCLEdBQUcsZUFBTyxHQUFHLFFBQVEsQ0FBQztRQUMxQywrQ0FBK0M7UUFDL0MscUJBQXFCO1FBQ3JCLElBQUksUUFBUSxHQUFHLGdCQUFRLENBQUM7UUFDeEIsMEJBQTBCO1FBQzFCLElBQUk7UUFDSiw0Q0FBNEM7UUFFNUMsY0FBYztRQUNkLElBQUk7UUFDSiw0Q0FBNEM7UUFDNUMsd0JBQXdCO1FBRXhCLFVBQVU7UUFDVixJQUFJLEdBQUcsR0FBRyxNQUFNLG1CQUFRLENBQUMsU0FBUyxDQUFDLGdCQUFnQixFQUFFLFFBQVEsQ0FBQyxDQUFDO1FBQy9ELElBQUksR0FBRyxJQUFJLEtBQUssRUFDaEI7WUFDSSxPQUFPO1NBQ1Y7UUFFRCxXQUFXO0lBR2YsQ0FBQztDQUFBO0FBRUQsMElBQTBJO0FBRTFJLFNBQVM7QUFFVCxtQkFBUSxDQUFDLGFBQWEsQ0FBQyxlQUFPLEdBQUMsWUFBWSxDQUFDLENBQUMifQ==
+main("https://www.ixdzs.com/down?id=206154&p=4", exports.RootDir + '/bookJson/');
+//# sourceMappingURL=data:application/json;base64,eyJ2ZXJzaW9uIjozLCJmaWxlIjoiaW5kZXguanMiLCJzb3VyY2VSb290IjoiIiwic291cmNlcyI6WyIuLi9zcmMvaW5kZXgudHMiXSwibmFtZXMiOltdLCJtYXBwaW5ncyI6Ijs7Ozs7Ozs7Ozs7OztBQUFBLDRDQUFtQjtBQUNuQix5Q0FBc0M7QUFDdEMsNkNBQTBDO0FBRTdCLFFBQUEsT0FBTyxHQUFHLFNBQVMsR0FBRyxLQUFLLENBQUM7QUFDNUIsUUFBQSxRQUFRLEdBQUcsTUFBTSxDQUFDO0FBRS9CLFNBQWUsSUFBSSxDQUFDLFdBQWtCLEVBQUMsT0FBYzs7UUFFakQsV0FBVztRQUNYLElBQUksV0FBVyxHQUFHLGVBQU8sR0FBRyxZQUFZLENBQUM7UUFDekMsSUFBSSxRQUFRLEdBQUcsZ0JBQVEsQ0FBQztRQUV4QixZQUFFLENBQUMsU0FBUyxDQUFDLFdBQVcsQ0FBQyxDQUFBO1FBR3pCLE1BQU07UUFDTixJQUFJLEdBQUcsR0FBRyxNQUFNLHVCQUFVLENBQUMsWUFBWSxDQUFDLDBDQUEwQyxFQUFFLFdBQVcsRUFBRSxRQUFRLEdBQUcsT0FBTyxDQUFDLENBQUM7UUFDckgsSUFBSSxHQUFHLElBQUksS0FBSyxFQUNoQjtZQUNJLG1CQUFRLENBQUMsY0FBYyxDQUFDLFdBQVcsQ0FBQyxDQUFDO1lBQ3JDLE9BQU8sS0FBSyxDQUFDO1NBQ2hCO1FBRUQsVUFBVTtRQUNWLEdBQUcsR0FBRyxNQUFNLG1CQUFRLENBQUMsU0FBUyxDQUFDLFdBQVcsRUFBRSxRQUFRLEVBQUUsV0FBVyxDQUFDLENBQUM7UUFDbkUsSUFBSSxHQUFHLElBQUksS0FBSyxFQUNoQjtZQUNJLG1CQUFRLENBQUMsY0FBYyxDQUFDLFdBQVcsQ0FBQyxDQUFDO1lBQ3JDLE9BQU8sS0FBSyxDQUFDO1NBQ2hCO1FBRUQsV0FBVztRQUNYLFlBQUUsQ0FBQyxTQUFTLENBQUMsT0FBTyxDQUFDLENBQUE7UUFDckIsR0FBRyxHQUFHLE1BQU0sbUJBQVEsQ0FBQyxhQUFhLENBQUMsV0FBVyxHQUFDLFFBQVEsRUFBRSxPQUFPLENBQUMsQ0FBQztRQUNsRSxJQUFJLEdBQUcsSUFBSSxLQUFLLEVBQ2hCO1lBQ0ksbUJBQVEsQ0FBQyxjQUFjLENBQUMsV0FBVyxDQUFDLENBQUM7WUFDckMsbUJBQVEsQ0FBQyxjQUFjLENBQUMsT0FBTyxDQUFDLENBQUM7WUFDakMsT0FBTyxLQUFLLENBQUM7U0FDaEI7UUFFRCxXQUFXO1FBQ1gsbUJBQVEsQ0FBQyxjQUFjLENBQUMsV0FBVyxDQUFDLENBQUM7UUFFckMsT0FBTyxJQUFJLENBQUM7SUFDaEIsQ0FBQztDQUFBO0FBR0QsSUFBSSxDQUFDLDBDQUEwQyxFQUFFLGVBQU8sR0FBRyxZQUFZLENBQUMsQ0FBQyJ9

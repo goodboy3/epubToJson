@@ -5,36 +5,49 @@ import { DownLoader } from './DownLoader';
 export const RootDir = __dirname + '/..';
 export const TempFile = 'temp';
 
-async function main()
+async function main(downloadUrl:string,distDir:string)
 {
     //读取文件夹内的文件
-    let epubDocumentPath = RootDir + '/epub/';
-    //let files = fs.readdirSync(epubDocumentPath);
-    //console.log(files);
+    let epubDirPath = RootDir + '/epubTemp/';
     let fileName = TempFile;
-    // if (files.length == 0) 
-    // {
-    //     console.log("can not find any file");
-        
-    //     return;
-    // }
-    // fileName = files[0].replace('.epub', '');
-    //console.log(fileName);
+
+    fs.mkdirSync(epubDirPath)
+
+
+    //下载文件
+    let res = await DownLoader.DownLoadFile("https://www.ixdzs.com/down?id=206154&p=4", epubDirPath, fileName + '.epub');
+    if (res == false)
+    {
+        Operator.DeleteTempFile(epubDirPath);
+        return false;
+    }
     
     //解压epub文件
-    let res = await Operator.UnzipEpub(epubDocumentPath, fileName);
+    res = await Operator.UnzipEpub(epubDirPath, fileName, epubDirPath);
     if (res == false) 
     {
-        return;
+        Operator.DeleteTempFile(epubDirPath);
+        return false;
     }
 
     //解压成功后开始解析
+    fs.mkdirSync(distDir)
+    res = await Operator.ConvertToJson(epubDirPath+fileName, distDir);
+    if (res == false)
+    {
+        Operator.DeleteTempFile(epubDirPath);
+        Operator.DeleteTempFile(distDir);
+        return false;
+    }
 
+    //完成后删除临时文件
+    Operator.DeleteTempFile(epubDirPath);
 
+    return true;
 }
 
-//let downResult:boolean= await DownLoader.DownLoadFile("https://www.ixdzs.com/down?id=206154&p=4", RootDir + '/epub/', TempFile+'.epub');
 
-//main();
+main("https://www.ixdzs.com/down?id=206154&p=4", RootDir + '/bookJson/');
 
-Operator.ConvertToJson(RootDir+'/bookJson/');
+
+

@@ -1,6 +1,5 @@
 
 const compressing = require('compressing');
-import xml2js from 'xml2js'
 import xml2json from 'xml2json';
 import fs from 'fs';
 import { RootDir } from '.';
@@ -24,83 +23,112 @@ export const deleteLine = [
 
 export class Operator
 {
-    static srcFile: string = null;
-    static unzipDir: string = null;
     //解压epub文件
-    static UnzipEpub(epubDocumentPath: string, fileName: string)
+    static UnzipEpub(epubDirPath: string, fileName: string,distDir:string,unzipToSubDir:boolean=true)
     {
-        Operator.srcFile = epubDocumentPath + fileName + '.epub';
-        Operator.unzipDir = epubDocumentPath + fileName;
+        let srcFile = epubDirPath + fileName + '.epub';
         return new Promise<boolean>((resolve, reject) =>
         {
-            compressing.zip.uncompress(Operator.srcFile, Operator.unzipDir)
+            if (!fs.existsSync(srcFile)) 
+            {
+                console.log(srcFile+' is not exist');
+                resolve(false);    
+            }
+            let dist = distDir;
+            if (unzipToSubDir) {
+                dist += fileName;
+            }
+            compressing.zip.uncompress(srcFile, dist)
                 .then(() =>
                 {
+                    console.log("解压完成");
                     resolve(true)
                 })
                 .catch((err: any) =>
                 {
-                    Operator.srcFile = null;
-                    Operator.unzipDir = null;
                     console.log(err);
                     resolve(false);
                 })
         })
     }
 
-    static async ConvertToJson(distDir: string)
+    static async ConvertToJson(srcDir:string,distDir: string)
     {
-        //解析目录 catalog.xhtml
-        let string = fs.readFileSync(RootDir + '/epub/temp/catalog.xhtml', 'utf8');
-        let result: any = xml2json.toJson(string);
-    
-        console.log(JSON.parse(result));
-        result = JSON.parse(result);
-        let arr = result.html.body.ul.li;
-        //console.log(arr);
-        let lastChapters: string[] = [];
-        let book: { cata: string[], contentFiles: string[] } = {
-            cata: [],
-            contentFiles: [],
-        }
-        let index = 0;
-        let lastChapterCount = arr.length - 10;
-        for (let element of arr)
+        try
         {
-            let item = element.a;
-            //console.log(item._);
-            book.cata.push(item.$t);
-            //console.log(item.$.href);
-            book.contentFiles.push(item.href);
-            if (index >= lastChapterCount)
-            {
-                lastChapters.unshift(item.$t)
+            //解析目录 catalog.xhtml
+            let string = fs.readFileSync(srcDir+'/catalog.xhtml', 'utf8');
+            let result: any = xml2json.toJson(string);
+
+            //console.log(JSON.parse(result));
+            result = JSON.parse(result);
+            let arr = result.html.body.ul.li;
+            //console.log(arr);
+            let lastChapters: string[] = [];
+            let book: { cata: string[], contentFiles: string[] } = {
+                cata: [],
+                contentFiles: [],
             }
-            index++;
-        }
-        //保存目录
-        Operator.SaveJson(book.cata, distDir, 'book.json')
-
-        //保存最后几个章节的标题
-        Operator.SaveJson(lastChapters, distDir, 'latestchapters.json')
-
-        //转换并保存小说内容
-        index = 0;
-        for (let file of book.contentFiles)
-        {
-            let chapter = await Operator.ConvertContent(file);
-            Operator.SaveJson(chapter, distDir, index + '.json');
-            index++;
-            console.log('...'+index+'/'+book.contentFiles.length);
+            let index = 0;
+            let lastChapterCount = arr.length - 10;
+            for (let element of arr)
+            {
+                let item = element.a;
+                //console.log(item._);
+                book.cata.push(item.$t);
+                //console.log(item.$.href);
+                book.contentFiles.push(item.href);
+                if (index >= lastChapterCount)
+                {
+                    lastChapters.unshift(item.$t)
+                }
+                index++;
+            }
+            //保存目录
+            let success:boolean = await Operator.SaveJson(book.cata, distDir, 'book.json')
+            if (!success) {
+                console.log('convert book catalog fail');
+                return false;
+            }
+            console.log('convert book catalog finish...');
             
+            
+
+            //保存最后几个章节的标题
+            success = await Operator.SaveJson(lastChapters, distDir, 'latestchapters.json')
+            if (!success)
+            {
+                console.log('convert latestchapters fail');
+                return false;
+            }
+            console.log('convert last 10 chapters finish...');
+
+            //转换并保存小说内容
+            index = 0;
+            for (let file of book.contentFiles)
+            {
+                let chapter = await Operator.ConvertContent(srcDir+'/'+file);
+                success = await Operator.SaveJson(chapter, distDir, index + '.json');
+                if (!success)
+                {
+                    console.log('convert content fail: index--->'+index);
+                    return false;
+                }
+                index++;
+                console.log('converting content--->' + index + '/' + book.contentFiles.length);
+            }
+            console.log("convert whole book finish");
+            return true;
+        } catch (error)
+        {
+            console.error('convert book failed:', error); 
+            return false;
         }
-        console.log("convert finish");
     }
 
-    static async ConvertContent(contentFile: string, )
+    private static async ConvertContent(contentFile: string, )
     {
-        let file = contentFile;
-        let string = fs.readFileSync(RootDir + '/epub/temp/' + file, 'utf8');
+        let string = fs.readFileSync(contentFile, 'utf8');
         let result: any = xml2json.toJson(string);
         result = JSON.parse(result);
 
@@ -149,13 +177,42 @@ export class Operator
         return chapterArr;
     }
 
-    static async SaveJson(cata: string[], distDir: string, fileName: string)
+    //将json保存为文件
+    private static async SaveJson(data: string[], distDir: string, fileName: string)
     {
         if (fs.existsSync(distDir + fileName))
         {
             fs.unlinkSync(distDir + fileName);
         }
-        fs.writeFileSync(distDir + fileName, JSON.stringify(cata));
+        try {
+            let fileData = JSON.stringify(data)
+            fs.writeFileSync(distDir + fileName, fileData);
+            return true;
+        } catch (error)
+        {
+            console.log('save fail:',error);
+            console.log('file name:'+distDir+fileName);
+            return false;
+        } 
+    }
+
+    static DeleteTempFile(path:string)
+    {
+        if (fs.existsSync(path))
+        {
+            fs.readdirSync(path).forEach(function (file)
+            {
+                var curPath = path + "/" + file;
+                if (fs.statSync(curPath).isDirectory())
+                { // recurse
+                    Operator.DeleteTempFile(curPath);
+                } else
+                { // delete file
+                    fs.unlinkSync(curPath);
+                }
+            });
+            fs.rmdirSync(path);
+        }
     }
 
 

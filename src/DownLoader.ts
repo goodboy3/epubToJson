@@ -11,24 +11,39 @@ export class DownLoader
         {
             dispatchTimeout = () =>
             {
+                console.log('无法完成下载');
+                clearTimeout(timer);
                 resolve(false)
             }
         })
 
-        setTimeout(() => {
+        let timer=setTimeout(() => {
             dispatchTimeout();
+            timer = null;
         }, timeout);
 
         let downloadPromise = new Promise<boolean>((resolve, reject) =>
         {
-            let stream = fs.createWriteStream(distDir + fileName);
-            let rs = request(url).pipe(stream)
+            try {
+                let stream = fs.createWriteStream(distDir + fileName);
+                let rs = request(url).pipe(stream)
+                rs.on('open', (fd: number) =>
+                {
+                    console.log("开始下载...");
+                })
 
-            rs.on('close', () =>
+                rs.on('close', () =>
+                {
+                    console.log("下载完毕");
+                    clearTimeout(timer);
+                    resolve(true)
+                });
+            } catch (error)
             {
-                console.log("下载完毕");
-                resolve(true)
-            });
+                clearTimeout(timer)
+                resolve(false)
+            }
+            
         })
         return Promise.race([timeoutPromise, downloadPromise]);
     }
