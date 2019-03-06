@@ -1,0 +1,14 @@
+{
+  "name": "epubtojson",
+  "version": "1.0.0",
+  "description": "convert epub to json",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "goodboy3",
+  "license": "ISC",
+  "dependencies": {
+    "xml2js": "^0.4.19"
+  }
+}
