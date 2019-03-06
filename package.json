@@ -2,13 +2,20 @@
   "name": "epubtojson",
   "version": "1.0.0",
   "description": "convert epub to json",
-  "main": "index.js",
+  "main": "./dist/index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "author": "goodboy3",
   "license": "ISC",
   "dependencies": {
-    "xml2js": "^0.4.19"
+    "@types/request": "^2.48.1",
+    "@types/xml2js": "^0.4.3",
+    "@types/xml2json": "^0.10.0",
+    "compressing": "^1.4.0",
+    "request": "^2.88.0",
+    "unzip": "^0.1.11",
+    "xml2js": "^0.4.19",
+    "xml2json": "^0.11.2"
   }
 }
