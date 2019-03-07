@@ -15,7 +15,7 @@ async function main(downloadUrl:string,distDir:string)
 
 
     //下载文件
-    let res = await DownLoader.DownLoadFile("https://www.ixdzs.com/down?id=206154&p=4", epubDirPath, fileName + '.epub');
+    let res = await DownLoader.DownLoadFile(downloadUrl, epubDirPath, fileName + '.epub');
     if (res == false)
     {
         Operator.DeleteTempFile(epubDirPath);

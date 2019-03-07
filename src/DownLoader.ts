@@ -11,7 +11,7 @@ export class DownLoader
         {
             dispatchTimeout = () =>
             {
-                console.log('无法完成下载');
+                console.log('下载超时');
                 clearTimeout(timer);
                 resolve(false)
             }
@@ -26,13 +26,20 @@ export class DownLoader
         {
             try {
                 let stream = fs.createWriteStream(distDir + fileName);
-                let rs = request(url).pipe(stream)
-                rs.on('open', (fd: number) =>
+                let rs = request(url);
+                rs.on('error', () =>
+                {
+                    console.log('请求错误,无法下载');
+                    clearTimeout(timer);
+                    resolve(false);
+                });
+                let pi=rs.pipe(stream)
+                pi.on('open', (fd: number) =>
                 {
                     console.log("开始下载...");
                 })
 
-                rs.on('close', () =>
+                pi.on('close', () =>
                 {
                     console.log("下载完毕");
                     clearTimeout(timer);
